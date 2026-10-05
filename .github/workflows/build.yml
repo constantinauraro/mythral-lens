@@ -1,0 +1,51 @@
+name: Build Mythral Lens for Windows
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ["app/**", "scripts/**", ".github/workflows/build.yml"]
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 60
+    steps:
+      - name: Get the project files
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Bundle 3D libraries and fonts (so the app works offline)
+        run: python scripts/prepare_offline.py
+
+      - name: Build the installer (.msi) and the standalone app (.exe)
+        shell: bash
+        run: >
+          npx -y pake-cli@latest ./build/app
+          --name "Mythral Lens"
+          --title "Mythral Lens"
+          --icon ./build/app/icon.ico
+          --width 1440 --height 900
+          --min-width 1000 --min-height 640
+          --enable-drag-drop
+          --dark-mode
+          --keep-binary
+          --app-version 1.0.0
+
+      - name: Upload Mythral Lens for Windows
+        uses: actions/upload-artifact@v4
+        with:
+          name: Mythral-Lens-Windows
+          path: |
+            *.msi
+            *.exe
+          if-no-files-found: error
